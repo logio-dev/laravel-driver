@@ -1,6 +1,8 @@
 # Logio for Laravel
 The official driver for Laravel, send your application logs to [Logio.dev](https://logio.dev).
 
+[![Tests](https://github.com/logio-dev/laravel-driver/actions/workflows/tests.yml/badge.svg)](https://github.com/logio-dev/laravel-driver/actions/workflows/tests.yml)
+
 # Install
 To start sending your logs to Logio follow the simple installation process below or read the guide posted on our blog at [https://logio.dev/blog/use-logio-with-laravel](https://logio.dev/blog/use-logio-with-laravel). 
 
