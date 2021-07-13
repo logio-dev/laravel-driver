@@ -1,13 +1,13 @@
 # Logio for Laravel
-The official driver for Laravel, send logs to Logio.dev.
+The official driver for Laravel, send your application logs to [Logio.dev](https://logio.dev).
 
 # Install
-To start sending your logs to Logio follow the simple installation process below.
+To start sending your logs to Logio follow the simple installation process below or read the guide posted on our blog at [https://logio.dev/blog/use-logio-with-laravel](https://logio.dev/blog/use-logio-with-laravel). 
 
 ## Install with Composer
 
 ```
-composer require logio/laravel-driver
+composer require logio-dev/laravel-driver
 ```
 
 ## Set API Key
@@ -36,7 +36,7 @@ return [
     'channels' => [
         'logio' => [
             'driver' => 'monolog',
-            'handler' => Logio\LogioHandler::class,
+            'handler' => \Logio\LogioHandler::class,
             'handler_with' => [
                 'key' => env('LOGIO_API_KEY'),
                 'channel' => env('APP_ENV'),
