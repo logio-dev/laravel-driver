@@ -10,7 +10,7 @@ class LogioHandler extends AbstractHandler
 {
     private const ENDPOINT = 'https://api.logio.dev';
 
-    private string $apiKey;
+    private $apiKey;
 
     public function __construct(string $key, $level = Logger::DEBUG, bool $bubble = true)
     {
@@ -21,8 +21,6 @@ class LogioHandler extends AbstractHandler
 
     public function handle(array $record): bool
     {
-        $response = Http::post(sprintf('%s/%s', self::ENDPOINT, $this->apiKey), $record);
-
-        return $response->successful();
+        return Http::post(sprintf('%s/%s', self::ENDPOINT, $this->apiKey), $record)->successful();
     }
 }
