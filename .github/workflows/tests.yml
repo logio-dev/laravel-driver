@@ -23,20 +23,11 @@ jobs:
       with:
         php-version: ${{ matrix.php-versions }}
 
-    - name: Validate composer.json and composer.lock
-      run: composer validate --strict
-
-    - name: Cache Composer packages
-      id: composer-cache
-      uses: actions/cache@v2
-      with:
-        path: vendor
-        key: ${{ runner.os }}-${{ matrix.php-versions }}-php-${{ hashFiles('**/composer.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-php-
-
     - name: Install dependencies
       run: composer update --prefer-dist --no-progress
+
+    - name: Validate composer.json and composer.lock
+      run: composer validate --strict
 
     - name: Run test suite
       run: ./vendor/bin/phpunit --testdox
