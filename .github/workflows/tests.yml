@@ -30,4 +30,4 @@ jobs:
       run: composer validate --strict
 
     - name: Run test suite
-      run: ./vendor/bin/phpunit --testdox
+      run: ./vendor/bin/pest
