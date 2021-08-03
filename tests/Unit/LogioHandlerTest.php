@@ -1,136 +1,133 @@
 <?php
 
-use Illuminate\Http\Client\Request;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Http;
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
 use Logio\LogioHandler;
 use Monolog\Logger;
 
 it(
     'can send single log event when buffer limit is zero',
     function () {
-        Http::fake(
-            [
-                'api.logio.dev' => Http::response(null, Response::HTTP_ACCEPTED),
-            ],
-        );
+        $mockClient = new Client(['handler' => HandlerStack::create(new MockHandler())]);
+        $mockClient = Mockery::spy($mockClient);
 
         $logger = new Logger(
             'tester',
             [
-                new LogioHandler(API_KEY, Logger::DEBUG, 0),
+                new LogioHandler(API_KEY, Logger::DEBUG, 0, API_ENDPOINT, $mockClient),
             ],
         );
         $logger->debug('hello world');
 
-        Http::assertSentCount(1);
+        $mockClient->shouldHaveReceived('postAsync')->once();
     }
 );
 
 it(
     'can send single log event when buffer limit is one',
     function () {
-        Http::fake(
-            [
-                'api.logio.dev' => Http::response(null, Response::HTTP_ACCEPTED),
-            ],
-        );
+        $mockClient = new Client(['handler' => HandlerStack::create(new MockHandler())]);
+        $mockClient = Mockery::spy($mockClient);
 
         $logger = new Logger(
             'tester',
             [
-                new LogioHandler(API_KEY, Logger::DEBUG, 1),
+                new LogioHandler(API_KEY, Logger::DEBUG, 1, API_ENDPOINT, $mockClient),
             ],
         );
         $logger->debug('hello world');
 
-        Http::assertSentCount(1);
+        $mockClient->shouldHaveReceived('postAsync')->once();
     }
 );
 
 it(
     'does not send when buffer limit is greater than total events',
     function () {
-        Http::fake();
+        $mockClient = new Client(['handler' => HandlerStack::create(new MockHandler())]);
+        $mockClient = Mockery::spy($mockClient);
 
         $logger = new Logger(
             'tester',
             [
-                new LogioHandler(API_KEY, Logger::DEBUG, 2),
+                new LogioHandler(API_KEY, Logger::DEBUG, 2, API_ENDPOINT, $mockClient),
             ],
         );
         $logger->debug('hello world');
 
-        Http::assertNothingSent();
+        $mockClient->shouldNotHaveReceived('postAsync');
     }
 );
 
 it(
     'does send multiple requests if buffer limit reached',
     function () {
-        Http::fake(
-            [
-                'api.logio.dev' => Http::response(null, Response::HTTP_ACCEPTED),
-            ],
-        );
+        $mockClient = new Client(['handler' => HandlerStack::create(new MockHandler())]);
+        $mockClient = Mockery::spy($mockClient);
 
         $logger = new Logger(
             'tester',
             [
-                new LogioHandler(API_KEY, Logger::DEBUG, 2),
+                new LogioHandler(API_KEY, Logger::DEBUG, 2, API_ENDPOINT, $mockClient),
             ],
         );
         $logger->debug('hello world');
         $logger->debug('hello world');
 
-        Http::assertSentCount(2);
+        $mockClient->shouldHaveReceived('postAsync')->twice();
     }
 );
 
 it(
     'does clear buffer after flushed',
     function () {
-        Http::fake(
-            [
-                'api.logio.dev' => Http::response(null, Response::HTTP_ACCEPTED),
-            ],
-        );
+        $mockClient = new Client(['handler' => HandlerStack::create(new MockHandler())]);
+        $mockClient = Mockery::spy($mockClient);
 
         $logger = new Logger(
             'tester',
             [
-                new LogioHandler(API_KEY, Logger::DEBUG, 0),
+                new LogioHandler(API_KEY, Logger::DEBUG, 0, API_ENDPOINT, $mockClient),
             ],
         );
         $logger->debug('hello world');
         $logger->debug('hello world');
 
-        Http::assertSentCount(2);
+        $mockClient->shouldHaveReceived('postAsync')->twice();
     }
 );
 
 it(
     'does contain valid message and level in request',
     function () {
-        Http::fake();
+        $mockClient = new Client(['handler' => HandlerStack::create(new MockHandler())]);
+        $mockClient = Mockery::spy($mockClient);
 
         $logger = new Logger(
             'tester',
             [
-                new LogioHandler(API_KEY, Logger::DEBUG, 0),
+                new LogioHandler(API_KEY, Logger::DEBUG, 0, API_ENDPOINT, $mockClient),
             ],
         );
         $logger->debug('hello world');
 
-        Http::assertSent(
-            function (Request $request) {
-                $data = $request->data();
-                return $data['message'] === 'hello world'
-                    && $data['level'] === Logger::DEBUG
-                    && $data['level_name'] === Logger::getLevelName(Logger::DEBUG)
-                    && $data['channel'] === 'tester'
-                    && $data['context'] === [];
-            }
+        $mockClient->shouldHaveReceived('postAsync')->once()->with(
+            Mockery::any(),
+            Mockery::on(function ($options) {
+                unset($options['json']['datetime']);
+
+                return $options === [
+                    'json' => [
+                        'message' => 'hello world',
+                        'context' => [],
+                        'level' => Logger::DEBUG,
+                        'level_name' => Logger::getLevelName(Logger::DEBUG),
+                        'channel' => 'tester',
+                        'extra' => [],
+                    ]
+                ];
+            })
         );
     }
 );
@@ -138,25 +135,33 @@ it(
 it(
     'does contain level INFO in request',
     function () {
-        Http::fake();
+        $mockClient = new Client(['handler' => HandlerStack::create(new MockHandler())]);
+        $mockClient = Mockery::spy($mockClient);
 
         $logger = new Logger(
             'tester',
             [
-                new LogioHandler(API_KEY, Logger::DEBUG, 0),
+                new LogioHandler(API_KEY, Logger::DEBUG, 0, API_ENDPOINT, $mockClient),
             ],
         );
         $logger->info('hello world');
 
-        Http::assertSent(
-            function (Request $request) {
-                $data = $request->data();
-                return $data['message'] === 'hello world'
-                    && $data['level'] === Logger::INFO
-                    && $data['level_name'] === Logger::getLevelName(Logger::INFO)
-                    && $data['channel'] === 'tester'
-                    && $data['context'] === [];
-            }
+        $mockClient->shouldHaveReceived('postAsync')->once()->with(
+            Mockery::any(),
+            Mockery::on(function ($options) {
+                unset($options['json']['datetime']);
+
+                return $options === [
+                    'json' => [
+                        'message' => 'hello world',
+                        'context' => [],
+                        'level' => Logger::INFO,
+                        'level_name' => Logger::getLevelName(Logger::INFO),
+                        'channel' => 'tester',
+                        'extra' => [],
+                    ]
+                ];
+            })
         );
     }
 );
@@ -164,25 +169,33 @@ it(
 it(
     'does contain context in request',
     function () {
-        Http::fake();
+        $mockClient = new Client(['handler' => HandlerStack::create(new MockHandler())]);
+        $mockClient = Mockery::spy($mockClient);
 
         $logger = new Logger(
             'tester',
             [
-                new LogioHandler(API_KEY, Logger::DEBUG, 0),
+                new LogioHandler(API_KEY, Logger::DEBUG, 0, API_ENDPOINT, $mockClient),
             ],
         );
-        $logger->debug('hello world', ['request-id' => 'foo-bar']);
+        $logger->debug('hello world', ['request-id' => 'foo']);
 
-        Http::assertSent(
-            function (Request $request) {
-                $data = $request->data();
-                return $data['message'] === 'hello world'
-                    && $data['level'] === Logger::DEBUG
-                    && $data['level_name'] === Logger::getLevelName(Logger::DEBUG)
-                    && $data['channel'] === 'tester'
-                    && $data['context'] === ['request-id' => 'foo-bar'];
-            }
+        $mockClient->shouldHaveReceived('postAsync')->once()->with(
+            Mockery::any(),
+            Mockery::on(function ($options) {
+                unset($options['json']['datetime']);
+
+                return $options === [
+                    'json' => [
+                        'message' => 'hello world',
+                        'context' => ['request-id' => 'foo'],
+                        'level' => Logger::DEBUG,
+                        'level_name' => Logger::getLevelName(Logger::DEBUG),
+                        'channel' => 'tester',
+                        'extra' => [],
+                    ]
+                ];
+            })
         );
     }
 );
@@ -190,25 +203,33 @@ it(
 it(
     'does contain correct channel in request',
     function () {
-        Http::fake();
+        $mockClient = new Client(['handler' => HandlerStack::create(new MockHandler())]);
+        $mockClient = Mockery::spy($mockClient);
 
         $logger = new Logger(
             'production',
             [
-                new LogioHandler(API_KEY, Logger::DEBUG, 0, 'production'),
+                new LogioHandler(API_KEY, Logger::DEBUG, 0, API_ENDPOINT, $mockClient),
             ],
         );
         $logger->debug('hello world');
 
-        Http::assertSent(
-            function (Request $request) {
-                $data = $request->data();
-                return $data['message'] === 'hello world'
-                    && $data['level'] === Logger::DEBUG
-                    && $data['level_name'] === Logger::getLevelName(Logger::DEBUG)
-                    && $data['channel'] === 'production'
-                    && $data['context'] === [];
-            }
+        $mockClient->shouldHaveReceived('postAsync')->once()->with(
+            Mockery::any(),
+            Mockery::on(function ($options) {
+                unset($options['json']['datetime']);
+
+                return $options === [
+                    'json' => [
+                        'message' => 'hello world',
+                        'context' => [],
+                        'level' => Logger::DEBUG,
+                        'level_name' => Logger::getLevelName(Logger::DEBUG),
+                        'channel' => 'production',
+                        'extra' => [],
+                    ]
+                ];
+            })
         );
     }
 );

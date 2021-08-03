@@ -11,12 +11,14 @@
 |
 */
 
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\Psr7\Response;
 use Orchestra\Testbench\TestCase;
 
 const API_KEY      = 'api-key';
 const API_ENDPOINT = 'https://api.logio.dev';
 
- uses(TestCase::class)->in('Unit');
+uses(TestCase::class)->in('Unit');
 
 /*
 |--------------------------------------------------------------------------
@@ -43,8 +45,3 @@ expect()->extend('toBeOne', function () {
 | global functions to help you to reduce the number of lines of code in your test files.
 |
 */
-
-function something()
-{
-    // ..
-}

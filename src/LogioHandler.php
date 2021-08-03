@@ -2,8 +2,8 @@
 
 namespace Logio;
 
-use Illuminate\Http\Client\Pool;
-use Illuminate\Support\Facades\Http;
+use GuzzleHttp\Client;
+use GuzzleHttp\Promise\Utils;
 use Monolog\Handler\HandlerInterface;
 use Monolog\Handler\ProcessableHandlerTrait;
 use Monolog\Logger;
@@ -11,6 +11,11 @@ use Monolog\Logger;
 class LogioHandler implements HandlerInterface
 {
     use ProcessableHandlerTrait;
+
+    /**
+     * @var Client
+     */
+    private $client;
 
     /**
      * @var string
@@ -58,14 +63,18 @@ class LogioHandler implements HandlerInterface
      * @param  int     $maxBuffer  The maximum buffer size until the logs are sent
      *                             to Logio and reset.
      *
-     * @param  string  $endpoint   The API endpoint for Logio.
+     * @param  string   $endpoint   The API endpoint for Logio.
+     * @param  Client|null $client An option to override the default client.
      */
     public function __construct(
         string $key,
         int $level = Logger::DEBUG,
         int $maxBuffer = 0,
-        string $endpoint = 'https://api.logio.dev'
+        string $endpoint = 'https://api.logio.dev',
+        $client = null
     ) {
+        $this->client = $client ?? new Client(['base_uri' => $endpoint]);
+
         $this->key         = $key;
         $this->level       = $level;
         $this->maxBuffer   = $maxBuffer;
@@ -77,7 +86,7 @@ class LogioHandler implements HandlerInterface
 
     public function handle(array $record): bool
     {
-        if ((int)$record['level'] < $this->level) {
+        if ((int) $record['level'] < $this->level) {
             return false;
         }
 
@@ -123,15 +132,11 @@ class LogioHandler implements HandlerInterface
 
     public function handleBatch(array $records): void
     {
-        Http::pool(
-            function (Pool $pool) use ($records) {
-                return array_map(
-                    function (array $record) use ($pool) {
-                        return $pool->post(sprintf('%s/%s', $this->endpoint, $this->key), $record);
-                    },
-                    $records,
-                );
-            }
-        );
+        $promises = [];
+        foreach ($records as $record) {
+            $promises[] = $this->client->postAsync('/' . $this->key, ['json' => $record]);
+        }
+
+        Utils::settle($promises)->wait();
     }
 }
